@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.TransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -21,7 +22,7 @@ import kotlin.math.roundToInt
 private const val MIN_VISIBLE_BARS_COUNT = 20
 
 @Composable
-fun Terminal(barList: List<Bar>) {
+fun Terminal(bars: List<Bar>) {
     var visibleBarsCount by remember {
         mutableIntStateOf(100)
     }
@@ -30,21 +31,29 @@ fun Terminal(barList: List<Bar>) {
         mutableFloatStateOf(0f)
     }
 
-    var barWidth by remember {
-        mutableFloatStateOf(0f)
+    val barWidth by remember {
+        derivedStateOf { terminalWidth / visibleBarsCount }
     }
 
     var scrolledBy by remember {
         mutableFloatStateOf(0f)
     }
 
+    val visibleBars by remember {
+        derivedStateOf {
+            val startIndex = (scrolledBy / barWidth).roundToInt().coerceAtLeast(0)
+            val endIndex = (startIndex + visibleBarsCount).coerceAtMost(bars.size)
+            bars.subList(startIndex, endIndex)
+        }
+    }
+
     val transformableState = TransformableState { zoomChange, panChange, rotationChange ->
         visibleBarsCount = (visibleBarsCount / zoomChange)
             .roundToInt()
-            .coerceIn(MIN_VISIBLE_BARS_COUNT, barList.size)
+            .coerceIn(MIN_VISIBLE_BARS_COUNT, bars.size)
 
         scrolledBy = (scrolledBy + panChange.x)
-            .coerceIn(0f, barList.size * barWidth - terminalWidth)
+            .coerceIn(0f, bars.size * barWidth - terminalWidth)
     }
 
     Canvas(
@@ -54,13 +63,13 @@ fun Terminal(barList: List<Bar>) {
             .transformable(transformableState)
     ) {
         terminalWidth = size.width
-        val max = barList.maxOf { it.high }
-        val min = barList.minOf { it.low }
-        barWidth = size.width / visibleBarsCount
+
+        val max = visibleBars.maxOf { it.high }
+        val min = visibleBars.minOf { it.low }
         val pxPerPoint = size.height / (max - min)
 
         translate(left = scrolledBy) {
-            barList.forEachIndexed { index, bar ->
+            bars.forEachIndexed { index, bar ->
                 val offsetX = size.width - index * barWidth
                 drawLine(
                     color = Color.White,
