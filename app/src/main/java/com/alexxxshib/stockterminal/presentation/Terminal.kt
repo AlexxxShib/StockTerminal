@@ -2,26 +2,46 @@ package com.alexxxshib.stockterminal.presentation
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.TransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.alexxxshib.stockterminal.data.Bar
+import kotlin.math.roundToInt
+
+private const val MIN_VISIBLE_BARS_COUNT = 20
 
 @Composable
 fun Terminal(barList: List<Bar>) {
+    var visibleBarsCount by remember {
+        mutableStateOf(100)
+    }
+
+    val transformableState = TransformableState { zoomChange, panChange, rotationChange ->
+        visibleBarsCount = (visibleBarsCount / zoomChange)
+            .roundToInt()
+            .coerceIn(MIN_VISIBLE_BARS_COUNT, barList.size)
+    }
+
     Canvas(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .transformable(transformableState)
     ) {
         val max = barList.maxOf { it.high }
         val min = barList.minOf { it.low }
-        val barWidth = size.width / barList.size
+        val barWidth = size.width / visibleBarsCount
         val pxPerPoint = size.height / (max - min)
         barList.forEachIndexed { index, bar ->
-            val offsetX = index * barWidth
+            val offsetX = size.width - index * barWidth
             drawLine(
                 color = Color.White,
                 strokeWidth = 1f,
