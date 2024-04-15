@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
                     is TerminalScreenState.Initial -> { }
 
                     is TerminalScreenState.Content -> {
-                        Log.d("MainActivity", currentState.barList.joinToString { it.toString() })
+                        Terminal(barList = currentState.barList)
                     }
                 }
             }
