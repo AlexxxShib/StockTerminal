@@ -16,18 +16,23 @@ class TerminalViewModel: ViewModel() {
     private val _state = MutableStateFlow<TerminalScreenState>(TerminalScreenState.Initial)
     val state = _state.asStateFlow()
 
+    private var lastState: TerminalScreenState = TerminalScreenState.Initial
+
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         Log.d("TerminalViewModel", "Exception: $throwable")
+        _state.value = lastState
     }
 
     init {
         loadBarList()
     }
 
-    private fun loadBarList() {
-        viewModelScope.launch {
-            val result = apiService.loadBars()
-            _state.value = TerminalScreenState.Content(result.barList)
+    fun loadBarList(timeFrame: TimeFrame = TimeFrame.HOUR_1) {
+        lastState = _state.value
+        _state.value = TerminalScreenState.Loading
+        viewModelScope.launch(exceptionHandler) {
+            val result = apiService.loadBars(timeFrame.apiValue)
+            _state.value = TerminalScreenState.Content(timeFrame, result.barList)
         }
     }
 }
